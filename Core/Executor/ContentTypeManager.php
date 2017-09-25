@@ -299,7 +299,23 @@ class ContentTypeManager extends RepositoryExecutor implements MigrationGenerato
         $contentTypeService = $this->repository->getContentTypeService();
 
         try {
-            $contentTypeService->loadContentTypeByIdentifier($step->dsl['identifier']);
+            $contentType = $contentTypeService->loadContentTypeByIdentifier($step->dsl['identifier']);
+
+            if (!empty($step->dsl['remove_extra_attributes'])) {
+                $step->dsl['remove_attributes'] = array();
+                $existingAttributeIdentifiers = array();
+
+                foreach ($step->dsl['attributes'] as $attribute) {
+                    $existingAttributeIdentifiers[] = $attribute['identifier'];
+                }
+
+                foreach ($contentType->getFieldDefinitions() as $fieldDefinition) {
+                    if (!in_array($fieldDefinition->identifier, $existingAttributeIdentifiers)) {
+                        $step->dsl['remove_attributes'][] = $fieldDefinition->identifier;
+                    }
+                }
+            }
+
             return $this->update($step);
         } catch (NotFoundException $e) {
             return $this->create($step);
