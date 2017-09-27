@@ -167,12 +167,14 @@ class ContentTypeManager extends RepositoryExecutor implements MigrationGenerato
 
             if (isset($step->dsl['name'])) {
                 $contentTypeUpdateStruct->names = array($this->getLanguageCode($step) => $step->dsl['name']);
+                $contentTypeUpdateStruct->names += $contentTypeDraft->getNames();
             }
 
             if (isset($step->dsl['description'])) {
                 $contentTypeUpdateStruct->descriptions = array(
                     $this->getLanguageCode($step) => $step->dsl['description'],
                 );
+                $contentTypeUpdateStruct->descriptions += $contentTypeDraft->getDescriptions();
             }
 
             if (isset($step->dsl['name_pattern'])) {
@@ -210,6 +212,12 @@ class ContentTypeManager extends RepositoryExecutor implements MigrationGenerato
                         $fieldDefinitionUpdateStruct = $this->updateFieldDefinition(
                             $contentTypeService, $attribute, $attribute['identifier'], $contentType->identifier, $this->getLanguageCode($step)
                         );
+                        if (is_array($fieldDefinitionUpdateStruct->names)) {
+                            $fieldDefinitionUpdateStruct->names += $existingFieldDefinition->getNames();
+                        }
+                        if (is_array($fieldDefinitionUpdateStruct->descriptions)) {
+                            $fieldDefinitionUpdateStruct->descriptions += $existingFieldDefinition->getDescriptions();
+                        }
                         $contentTypeService->updateFieldDefinition(
                             $contentTypeDraft,
                             $existingFieldDefinition,
