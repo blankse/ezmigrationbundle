@@ -1,5 +1,5 @@
 {
-    "name": "kaliop/ezmigrationbundle",
+    "name": "datafactory/ezmigrationbundle",
     "type": "symfony-bundle",
     "description": "Kaliop eZ-Migration Bundle",
     "keywords": ["migrations", "database", "ezpublish"],
@@ -38,6 +38,9 @@
         "php-http/mock-client": "*",
         "phpunit/phpunit": "~4.0 || ~5.0",
         "codeclimate/php-test-reporter": "~0.4"
+    },
+    "replace": {
+        "kaliop-uk/ezmigrationbundle": "*"
     },
     "suggest": {
         "php-http/httplug-bundle": "Required for usage of HTTP/CALL migration steps"
