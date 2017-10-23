@@ -3,6 +3,7 @@
 namespace Kaliop\eZMigrationBundle\Core\Executor;
 
 use eZ\Publish\API\Repository\ContentTypeService;
+use eZ\Publish\API\Repository\Exceptions\NotFoundException;
 use eZ\Publish\API\Repository\Values\ContentType\ContentType;
 use eZ\Publish\API\Repository\Values\ContentType\FieldDefinition;
 use Kaliop\eZMigrationBundle\API\Collection\ContentTypeCollection;
@@ -19,7 +20,7 @@ use JmesPath\Env as JmesPath;
  */
 class ContentTypeManager extends RepositoryExecutor implements MigrationGeneratorInterface
 {
-    protected $supportedActions = array('create', 'load', 'update', 'delete');
+    protected $supportedActions = array('create', 'load', 'update', 'delete', 'upsert');
     protected $supportedStepTypes = array('content_type');
 
     protected $contentTypeMatcher;
@@ -230,6 +231,20 @@ class ContentTypeManager extends RepositoryExecutor implements MigrationGenerato
 
             // Remove attributes
             if (isset($step->dsl['remove_attributes'])) {
+                if ($step->dsl['remove_attributes'] === '*') {
+                    $step->dsl['remove_attributes'] = array();
+                    $existingAttributeIdentifiers = array();
+
+                    foreach ($step->dsl['attributes'] as $attribute) {
+                        $existingAttributeIdentifiers[] = $attribute['identifier'];
+                    }
+
+                    foreach ($contentType->getFieldDefinitions() as $fieldDefinition) {
+                        if (!in_array($fieldDefinition->identifier, $existingAttributeIdentifiers)) {
+                            $step->dsl['remove_attributes'][] = $fieldDefinition->identifier;
+                        }
+                    }
+                }
                 foreach ($step->dsl['remove_attributes'] as $attribute) {
                     $existingFieldDefinition = $this->contentTypeHasFieldDefinition($contentType, $attribute);
                     if ($existingFieldDefinition) {
@@ -272,6 +287,29 @@ class ContentTypeManager extends RepositoryExecutor implements MigrationGenerato
         }
 
         return $contentTypeCollection;
+    }
+
+    /**
+     * Method that create a content type if it doesn't already exist, or update it if it do.
+     */
+    protected function upsert($step)
+    {
+        if (!isset($step->dsl['identifier'])) {
+            throw new \Exception("The 'identifier' key is missing in a content type upsert definition");
+        }
+        if (isset($step->dsl['match'])) {
+            throw new \Exception("The 'match' key is not supported in a content type upsert definition");
+        }
+
+        $contentTypeService = $this->repository->getContentTypeService();
+
+        try {
+            $contentTypeService->loadContentTypeByIdentifier($step->dsl['identifier']);
+
+            return $this->update($step);
+        } catch (NotFoundException $e) {
+            return $this->create($step);
+        }
     }
 
     /**
