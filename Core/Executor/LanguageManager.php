@@ -2,6 +2,7 @@
 
 namespace Kaliop\eZMigrationBundle\Core\Executor;
 
+use eZ\Publish\API\Repository\Exceptions\NotFoundException;
 use Kaliop\eZMigrationBundle\API\Collection\LanguageCollection;
 
 /**
@@ -10,7 +11,7 @@ use Kaliop\eZMigrationBundle\API\Collection\LanguageCollection;
 class LanguageManager extends RepositoryExecutor
 {
     protected $supportedStepTypes = array('language');
-    protected $supportedActions = array('create', 'delete');
+    protected $supportedActions = array('create', 'delete', 'upsert');
 
     /**
      * Handles the language create migration action
@@ -73,6 +74,26 @@ class LanguageManager extends RepositoryExecutor
         $languageService->deleteLanguage($language);
 
         return $language;
+    }
+
+    /**
+     * Method that create a language if it doesn't already exist.
+     */
+    protected function upsert($step)
+    {
+        if (!isset($step->dsl['lang'])) {
+            throw new \Exception("The 'lang' key is missing in a language upsert definition");
+        }
+
+        $languageService = $this->repository->getContentLanguageService();
+
+        try {
+            $language = $languageService->loadLanguage($step->dsl['lang']);
+
+            return $language;
+        } catch (NotFoundException $e) {
+            return $this->create($step);
+        }
     }
 
     /**
